@@ -12,14 +12,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      # @v3 から @v4 にアップデート
       uses: actions/checkout@v4
 
     - name: Set up Python
-      # @v4 から @v5 にアップデート
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # より安定したバージョンに指定
+        python-version: '3.11'
 
     - name: Install dependencies
       run: |
@@ -30,5 +28,4 @@ jobs:
       env:
         LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
         USER_ID: ${{ secrets.USER_ID }}
-      # ファイル名にスペースがあるため " " で囲む
       run: python "job hunt app.py"
