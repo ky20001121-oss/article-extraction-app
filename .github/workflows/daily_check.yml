@@ -26,6 +26,7 @@ jobs:
 
     - name: Run script
       env:
+        # GitHub Secrets の名前に完全に一致させています
         LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
         USER_ID: ${{ secrets.USER_ID }}
       run: python "job hunt app.py"
