@@ -2,7 +2,7 @@ name: Job Hunter Auto Notification
 
 on:
   schedule:
-    # 毎日 朝8時（日本時間）に実行する場合
+    # 毎日 朝8時（日本時間）に実行
     - cron: '0 23 * * *'
   workflow_dispatch: # 手動実行ボタン
 
@@ -12,12 +12,14 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      # @v3 から @v4 にアップデート
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      # @v4 から @v5 にアップデート
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11' # より安定したバージョンに指定
 
     - name: Install dependencies
       run: |
@@ -28,4 +30,5 @@ jobs:
       env:
         LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
         USER_ID: ${{ secrets.USER_ID }}
+      # ファイル名にスペースがあるため " " で囲む
       run: python "job hunt app.py"
