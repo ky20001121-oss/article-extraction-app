@@ -15,39 +15,41 @@ def scrape_jobs():
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    # ロボット感を消すための設定
     chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
     
     driver = webdriver.Chrome(options=chrome_options)
     
-    # シンプルに「エンジニア」で検索
+    # 検索条件
     search_url = "https://en-gage.net/user/search/list/?keyword=%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&area=47"
     
     print(f"検索を開始します: {search_url}")
-    driver.get(search_url)
-
     new_jobs = []
+
     try:
-        # 💡 ここが重要：h3タグ（求人タイトル）が表示されるまで最大20秒待つ
-        wait = WebDriverWait(driver, 20)
+        driver.get(search_url)
+        
+        # 1. ページが読み込まれるまで最大15秒待機
+        wait = WebDriverWait(driver, 15)
+        # 求人リストの共通クラスまたはh3が現れるのを待つ
         wait.until(EC.presence_of_element_located((By.TAG_NAME, "h3")))
         
-        # ページが安定するまで少し追加待機
-        time.sleep(3)
+        # 2. 念のため少し追加待機
+        time.sleep(5)
 
-        # 求人のタイトルをすべて取得
+        # 3. 求人タイトルの抽出
         items = driver.find_elements(By.TAG_NAME, "h3")
-        
         for item in items:
             text = item.text.strip()
-            # 短すぎる文字（メニュー名など）を除外
-            if len(text) > 8: 
+            # 求人タイトルっぽい長さのものだけ採用
+            if len(text) >= 10:
                 new_jobs.append(f"📌 {text}")
-                if len(new_jobs) >= 5: break # 最大5件
-                
-    except Exception as e:
-        print(f"待機中にタイムアウトまたはエラー: {e}")
+                if len(new_jobs) >= 5: break
 
+    except Exception as e:
+        print(f"エラーが発生しました。詳細はログを確認してください。")
+    
+    # ★ポイント: 閉じる前にタイトルを保存しておく
+    current_title = driver.title
     driver.quit()
 
     if new_jobs:
@@ -55,8 +57,7 @@ def scrape_jobs():
         send_line(line_token, user_id, message)
         print(f"成功: {len(new_jobs)}件送信しました。")
     else:
-        # もしダメなら今のページのタイトルを表示してヒントにする
-        print(f"取得失敗。現在のページタイトル: {driver.title}")
+        print(f"取得できませんでした。サイト名: {current_title}")
 
 def send_line(token, to, text):
     url = "https://api.line.me/v2/bot/message/push"
