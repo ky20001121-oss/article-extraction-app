@@ -1,85 +1,69 @@
-﻿import os
+import os
 import time
-import csv
-import json
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
 
-# --- GitHub Secretsから設定を読み込む ---
-LINE_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN')
-USER_ID = os.environ.get('USER_ID')
+def scrape_engage_jobs_auto():
+    # 1. GitHub Secrets から設定を読み込む
+    line_token = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
+    user_id = os.getenv('USER_ID')
 
-def send_line_message(message_text):
-    """LINE Messaging APIを使って通知を送る関数"""
-    if not LINE_TOKEN or not USER_ID:
-        print("エラー: LINEのトークンまたはユーザーIDが設定されていません。")
-        return
+    # 2. Chromeのオプション設定（クラウド実行用）
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')  # 画面を表示しない
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
 
+    # 3. ブラウザの起動
+    driver = webdriver.Chrome(options=chrome_options)
+
+    # 4. 求人検索（テスト用に沖縄の「求人」全体で検索）
+    # area=47 は沖縄県です。keywordを「求人」にしてヒット率を上げています。
+    search_url = "https://en-gage.net/user/search/list/?keyword=求人&area=47"
+    driver.get(search_url)
+    time.sleep(3)  # 読み込み待ち
+
+    # 5. 求人情報の抽出
+    job_elements = driver.find_elements(By.CSS_SELECTOR, "div.p-search_list_item")
+    
+    new_jobs = []
+    for job in job_elements[:3]:  # 最新3件を取得
+        try:
+            title = job.find_element(By.CSS_SELECTOR, "h3").text
+            link = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+            new_jobs.append(f"【新着】{title}\n{link}")
+        except:
+            continue
+
+    driver.quit()
+
+    # 6. LINE送信処理
+    if new_jobs:
+        message = "\n\n".join(new_jobs)
+        send_line_message(line_token, user_id, message)
+        print(f"{len(new_jobs)}件の求人を送信しました。")
+    else:
+        print("新しい求人は見つかりませんでした。")
+
+def send_line_message(token, to_user, text):
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LINE_TOKEN}"
+        "Authorization": f"Bearer {token}"
     }
-    payload = {
-        "to": USER_ID,
-        "messages": [
-            {
-                "type": "text",
-                "text": message_text
-            }
-        ]
+    data = {
+        "to": to_user,
+        "messages": [{"type": "text", "text": text}]
     }
+    response = requests.post(url, headers=headers, json=data)
     
-    try:
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
-        response.raise_for_status()
-        print("LINE通知を送信しました。")
-    except Exception as e:
-        print(f"LINE通知の送信に失敗しました: {e}")
-
-def scrape_engage_jobs_auto():
-    # --- クラウド(Linux)環境向けのブラウザ設定 ---
-    options = Options()
-    options.add_argument('--headless')  # 画面を表示しない
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-
-    # WebDriverのセットアップ
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-    wait = WebDriverWait(driver, 10)
-
-    try:
-        # エンゲージの検索結果ページ（例：沖縄・エンジニア）へアクセス
-        # 検索条件に合わせてURLを変更してください
-        search_url = "https://en-gage.net/user/search/list/?keyword=エンジニア&area=47"
-        driver.get(search_url)
-        time.sleep(3)
-
-        # 求人タイトルを取得（例として最初の3件）
-        job_elements = driver.find_elements(By.CSS_SELECTOR, "h3.job_title")[:3]
-        
-        if job_elements:
-            message = "【最新の求人情報】\n"
-            for job in job_elements:
-                message += f"・{job.text}\n"
-            
-            # LINEに送信
-            send_line_message(message)
-        else:
-            print("新しい求人は見つかりませんでした。")
-
-    except Exception as e:
-        print(f"スクレイピング中にエラーが発生しました: {e}")
-    
-    finally:
-        driver.quit()
+    # LINE側のエラーをログに出す（重要！）
+    if response.status_code != 200:
+        print(f"LINE送信エラー: {response.status_code}")
+        print(response.text)
 
 if __name__ == "__main__":
     scrape_engage_jobs_auto()
