@@ -17,46 +17,35 @@ def scrape_jobs():
     
     driver = webdriver.Chrome(options=chrome_options)
     
-    # 沖縄のITエンジニア求人に絞ったURL
-    search_url = "https://求人ボックス.com/沖縄県のITエンジニアの求人"
+    # 検索ワードをURLエンコードしたもの（沖縄 ITエンジニア 求人）
+    search_url = "https://www.google.com/search?q=%E6%B2%96%E7%B8%84+IT%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2+%E6%B1%82%E4%BA%BA"
     
-    print(f"検索開始: {search_url}")
+    print(f"Google検索を開始: {search_url}")
     new_jobs = []
 
     try:
         driver.get(search_url)
-        time.sleep(8) # 読み込みを待つ
+        time.sleep(5)
 
-        # ターゲット：求人ボックスのタイトルが入る可能性のある場所を総ざらい
-        selectors = [
-            "span.k-p-title", 
-            "h3.s-jobTitle", 
-            "p.s-jobTitle",
-            "div.p-job__title"
-        ]
+        # Googleの検索結果のタイトル（h3タグ）を取得
+        items = driver.find_elements(By.TAG_NAME, "h3")
         
-        for selector in selectors:
-            items = driver.find_elements(By.CSS_SELECTOR, selector)
-            for item in items:
-                text = item.text.strip()
-                if len(text) >= 5: # 短すぎるゴミデータを除外
-                    new_jobs.append(f"📌 {text}")
-            
-            if new_jobs: break # 何か見つかったらループを抜ける
+        for item in items[:5]:
+            text = item.text.strip()
+            if text:
+                new_jobs.append(f"🔍 {text}")
 
     except Exception as e:
-        print(f"解析エラー: {e}")
+        print(f"エラー: {e}")
     
     driver.quit()
 
     if new_jobs:
-        # 重複を削除して最大5件送信
-        unique_jobs = list(dict.fromkeys(new_jobs))[:5]
-        message = "【最新】沖縄のエンジニア求人を見つけました！\n\n" + "\n\n".join(unique_jobs)
+        message = "【定期調査】沖縄のITエンジニア関連の検索結果です！\n\n" + "\n\n".join(new_jobs)
         send_line(line_token, user_id, message)
-        print(f"成功: {len(unique_jobs)}件をLINEに送りました。")
+        print(f"成功: {len(new_jobs)}件を送信しました。")
     else:
-        print(f"求人タイトルが見つかりませんでした。別の構造を探す必要があります。")
+        print("Googleからも情報を取得できませんでした。")
 
 def send_line(token, to, text):
     url = "https://api.line.me/v2/bot/message/push"
