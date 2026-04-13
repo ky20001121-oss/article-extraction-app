@@ -2,9 +2,8 @@ name: Job Hunter Auto Notification
 
 on:
   schedule:
-    # 毎日 朝8時（日本時間）に実行
     - cron: '0 23 * * *'
-  workflow_dispatch: # 手動実行ボタン
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,6 +18,12 @@ jobs:
       with:
         python-version: '3.11'
 
+    # --- ここが重要：Chrome本体をインストールする設定 ---
+    - name: Setup Chrome
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: stable
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -26,7 +31,6 @@ jobs:
 
     - name: Run script
       env:
-        # GitHub Secrets の名前に完全に一致させています
         LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
         USER_ID: ${{ secrets.USER_ID }}
       run: python "job hunt app.py"
