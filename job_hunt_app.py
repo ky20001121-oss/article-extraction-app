@@ -15,35 +15,40 @@ def scrape_jobs():
     chrome_options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(options=chrome_options)
     
-    # 検索条件：沖縄県(area=47) × エンジニア/技術職(category=2001)
-    # 状況に合わせてキーワードを変更してください
-    search_url = "https://en-gage.net/user/search/list/?keyword=%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&area=47"
+    # 検索キーワードを少し広げて「沖縄 IT」などにするとヒットしやすくなります
+    search_url = "https://en-gage.net/user/search/list/?keyword=IT%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&area=47"
     
     print(f"検索を開始します: {search_url}")
     driver.get(search_url)
-    time.sleep(5)  # 読み込み待ち
+    time.sleep(7)  # 読み込み時間を少し延長
 
     new_jobs = []
-    # 求人カードの要素を取得（エンゲージの現在の構造に対応）
-    job_elements = driver.find_elements(By.CSS_SELECTOR, "div.p-search_list_item")
-
-    for job in job_elements[:3]:  # 上位3件をチェック
-        try:
-            title = job.find_element(By.CSS_SELECTOR, "h3").text
-            link = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
-            new_jobs.append(f"📌 {title}\n🔗 {link}")
-        except:
-            continue
+    # より広い範囲のクラス名（articleやsectionなど）で探すように変更
+    try:
+        # 求人タイトルの要素を直接探す
+        items = driver.find_elements(By.CSS_SELECTOR, "h3")
+        
+        for item in items[:5]: # 上位5件
+            title = item.text.strip()
+            if title:
+                # リンクは親要素などから探す
+                try:
+                    link = item.find_element(By.XPATH, "./ancestor::a").get_attribute("href")
+                except:
+                    link = search_url # リンクが取れない場合は検索結果URLを代用
+                
+                new_jobs.append(f"📌 {title}\n🔗 {link}")
+    except Exception as e:
+        print(f"解析中にエラー: {e}")
 
     driver.quit()
 
     if new_jobs:
-        message = "【本番通知】沖縄のエンジニア求人を見つけました！\n\n" + "\n\n".join(new_jobs)
+        message = "【本番通知】沖縄のIT求人をピックアップしました！\n\n" + "\n\n".join(new_jobs)
         send_line(line_token, user_id, message)
         print(f"成功: {len(new_jobs)}件送信しました。")
     else:
-        # 0件だとActionsが寂しいのでログだけ出す
-        print("現在、条件に合う新しい求人は見つかりませんでした。")
+        print("ヒットしませんでした。キーワードを変えて試す価値があります。")
 
 def send_line(token, to, text):
     url = "https://api.line.me/v2/bot/message/push"
