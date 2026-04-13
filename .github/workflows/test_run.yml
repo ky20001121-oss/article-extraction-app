@@ -1,4 +1,4 @@
-name: Job Hunter Auto Notification
+name: Job Hunter FINAL TEST
 
 on:
   workflow_dispatch: # 手動実行用
@@ -9,22 +9,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 最新の変更を強制的に取得
 
       - name: Set up Python
-        uses: actions/checkout@v4
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install requests selenium webdriver-manager
+        run: pip install requests selenium webdriver-manager
 
       - name: Run script
         env:
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           USER_ID: ${{ secrets.USER_ID }}
         run: |
-          # キャッシュを無視して実行するために、あえてファイル名を指定
+          # ここで「アンダーバー」の方だけを指名して実行！
           python job_hunt_app.py
