@@ -4,8 +4,6 @@ import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 def scrape_jobs():
     line_token = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
@@ -19,45 +17,36 @@ def scrape_jobs():
     
     driver = webdriver.Chrome(options=chrome_options)
     
-    # 検索条件
-    search_url = "https://en-gage.net/user/search/list/?keyword=%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2&area=47"
+    # ターゲットを「求人ボックス」の沖縄×エンジニアに変更
+    search_url = "https://求人ボックス.com/沖縄県のエンジニアの求人"
     
-    print(f"検索を開始します: {search_url}")
+    print(f"ターゲットを変更して検索開始: {search_url}")
     new_jobs = []
 
     try:
         driver.get(search_url)
-        
-        # 1. ページが読み込まれるまで最大15秒待機
-        wait = WebDriverWait(driver, 15)
-        # 求人リストの共通クラスまたはh3が現れるのを待つ
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "h3")))
-        
-        # 2. 念のため少し追加待機
-        time.sleep(5)
+        time.sleep(10) # しっかり読み込み待機
 
-        # 3. 求人タイトルの抽出
-        items = driver.find_elements(By.TAG_NAME, "h3")
-        for item in items:
+        # 求人タイトルのクラス名を指定（求人ボックスの一般的な構成）
+        items = driver.find_elements(By.CSS_SELECTOR, "span.k-p-title, h3, .s-jobTitle")
+        
+        for item in items[:5]:
             text = item.text.strip()
-            # 求人タイトルっぽい長さのものだけ採用
-            if len(text) >= 10:
+            if len(text) >= 5:
                 new_jobs.append(f"📌 {text}")
-                if len(new_jobs) >= 5: break
 
     except Exception as e:
-        print(f"エラーが発生しました。詳細はログを確認してください。")
+        print(f"エラー発生: {e}")
     
-    # ★ポイント: 閉じる前にタイトルを保存しておく
     current_title = driver.title
     driver.quit()
 
     if new_jobs:
-        message = "【本番通知】沖縄のエンジニア求人を検出しました！\n\n" + "\n\n".join(new_jobs)
+        message = "【求人ボックス通知】沖縄のエンジニア求人を検出！\n\n" + "\n\n".join(new_jobs)
         send_line(line_token, user_id, message)
         print(f"成功: {len(new_jobs)}件送信しました。")
     else:
-        print(f"取得できませんでした。サイト名: {current_title}")
+        print(f"取得失敗。現在のページタイトル: {current_title}")
 
 def send_line(token, to, text):
     url = "https://api.line.me/v2/bot/message/push"
