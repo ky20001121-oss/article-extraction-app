@@ -19,7 +19,7 @@ def scrape_rss():
         response = requests.get(rss_url, timeout=10)
         response.raise_for_status() # エラーがあればここで例外を出す
 
-        # 4. XML形式のデータを解析
+        # 4. XML形式のデータを解析、見やすいように切り取りする
         root = ET.fromstring(response.content)
         
         # Atom形式のXML名前空間を定義
